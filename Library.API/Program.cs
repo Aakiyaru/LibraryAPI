@@ -1,5 +1,7 @@
 
+using Library.Applictation.Interfaces;
 using Library.Infrastructure.Data;
+using Library.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Library.API
@@ -12,6 +14,8 @@ namespace Library.API
 
             // Строка подключения будет лежать в appsettings.json
             builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddSingleton<IBookService, BookService>();
 
 
             // Add services to the container.
