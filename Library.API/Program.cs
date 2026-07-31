@@ -5,6 +5,7 @@ using Library.Infrastructure.Data;
 using Library.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using FluentValidation;
+using Library.API.Middleware;
 
 namespace Library.API
 {
@@ -40,6 +41,7 @@ namespace Library.API
 
             app.UseAuthorization();
 
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.MapControllers();
 
