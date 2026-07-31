@@ -1,4 +1,5 @@
-﻿using Library.Application.Dtos;
+﻿using FluentValidation;
+using Library.Application.Dtos;
 using Library.Applictation.Dtos;
 using Library.Applictation.Interfaces;
 using Library.Domain.Entities;
@@ -10,10 +11,12 @@ namespace Library.Infrastructure.Services
     public class BookService : IBookService
     {
         private readonly AppDbContext _context;
+        private readonly IValidator<CreateBookRequest> _validator;
 
-        public BookService (AppDbContext context)
+        public BookService (AppDbContext context, IValidator<CreateBookRequest> validator)
         {
             _context = context;
+            _validator = validator;
         }
 
         public async Task<IEnumerable<BookDto>> GetAllBooksAsync()
@@ -54,6 +57,13 @@ namespace Library.Infrastructure.Services
 
         public async Task<BookDto> CreateBookAsync(CreateBookRequest request)
         {
+            var validationResult = await _validator.ValidateAsync(request);
+
+            if(!validationResult.IsValid)
+            {
+                throw new ValidationException(validationResult.Errors);
+            }
+
             var book = Book.Create(
                     request.Title,
                     request.ISBN,

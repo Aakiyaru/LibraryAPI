@@ -39,11 +39,6 @@ namespace Library.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateBookRequest request)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             var created = await _bookService.CreateBookAsync(request);
 
             return CreatedAtAction(nameof(GetById), new {id =  created.Id}, created);
