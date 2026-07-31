@@ -1,6 +1,6 @@
 ﻿using Library.Application.Dtos;
+using Library.Applictation.Dtos;
 using Library.Applictation.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Library.API.Controllers
@@ -47,6 +47,13 @@ namespace Library.API.Controllers
             var created = await _bookService.CreateBookAsync(request);
 
             return CreatedAtAction(nameof(GetById), new {id =  created.Id}, created);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetBooks([FromQuery] BookQueryParameters parameters)
+        {
+            var result = await _bookService.GetBooksAsync(parameters);
+            return Ok(result);
         }
     }
 }

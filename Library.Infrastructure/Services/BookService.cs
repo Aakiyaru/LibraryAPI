@@ -1,4 +1,5 @@
 ﻿using Library.Application.Dtos;
+using Library.Applictation.Dtos;
 using Library.Applictation.Interfaces;
 using Library.Domain.Entities;
 using Library.Infrastructure.Data;
@@ -74,6 +75,71 @@ namespace Library.Infrastructure.Services
                 PublicationYear = book.PublicationYear,
                 TotalCopies = book.TotalCopies,
                 AvailableCopies = book.AvailableCopies
+            };
+        }
+
+        public async Task<PagedResult<BookDto>> GetBooksAsync(BookQueryParameters parameters)
+        {
+            var query = _context.Books.AsQueryable();
+
+            if(!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+            {
+                query = query.Where(b => b.Title.Contains(parameters.SearchTerm));
+            }
+
+            if(!string.IsNullOrWhiteSpace(parameters.Genre))
+            {
+                query = query.Where(b => b.Genre == parameters.Genre);
+            }
+
+            if(parameters.MinYear.HasValue)
+            {
+                query = query.Where(b => b.PublicationYear >= parameters.MinYear.Value);
+            }
+
+            if(parameters.MaxYear.HasValue)
+            {
+                query = query.Where(b => b.PublicationYear <= parameters.MaxYear.Value);
+            }
+
+            if(!string.IsNullOrWhiteSpace(parameters.SortBy))
+            {
+                query = parameters.SortBy.ToLower() switch
+                {
+                    "title" => parameters.SortDescending ? query.OrderByDescending(b => b.Title) : query.OrderBy(b => b.Title),
+                    "year" => parameters.SortDescending ? query.OrderByDescending(b => b.PublicationYear) : query.OrderBy(b => b.PublicationYear),
+                    "genre" => parameters.SortDescending ? query.OrderByDescending(b => b.Genre) : query.OrderBy(b => b.Genre),
+                    _ => query.OrderBy(b => b.Title)
+                };
+            }
+            else
+            {
+                query = query.OrderBy(b => b.Title);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((parameters.Page - 1) * parameters.PageSize)
+                .Take(parameters.PageSize)
+                .Select(b => new BookDto
+                {
+                    Id = b.Id,
+                    Title = b.Title,
+                    ISBN = b.ISBN,
+                    Genre = b.Genre,
+                    PublicationYear = b.PublicationYear,
+                    TotalCopies = b.TotalCopies,
+                    AvailableCopies = b.AvailableCopies
+                })
+                .ToListAsync();
+
+            return new PagedResult<BookDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = parameters.Page,
+                PageSize = parameters.PageSize
             };
         }
     }
