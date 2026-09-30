@@ -1,13 +1,14 @@
 ﻿using Library.Application.Dtos;
 using Library.Applictation.Dtos;
 
-namespace Library.Applictation.Interfaces
+namespace Library.Application.Interfaces;
+
+public interface IBookService
 {
-    public interface IBookService
-    {
-        Task<IEnumerable<BookDto>> GetAllBooksAsync();
-        Task<BookDto> GetBookByIdAsync(Guid id);
-        Task<BookDto> CreateBookAsync(CreateBookRequest request);
-        Task<PagedResult<BookDto>> GetBooksAsync(BookQueryParameters parameters);
-    }
+    Task<PagedResult<BookDto>> GetBooksAsync(BookQueryParameters parameters);
+    Task<BookDto> GetBookByIdAsync(Guid id);
+    Task<BookDto> CreateBookAsync(CreateBookRequest request);
+    Task<BookDto> UpdateBookAsync(Guid id, UpdateBookRequest request);
+    Task DeleteBookAsync(Guid id);
+    Task RestoreBookAsync(Guid id);
 }

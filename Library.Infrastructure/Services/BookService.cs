@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using Library.Application.Dtos;
+using Library.Application.Interfaces;
 using Library.Applictation.Dtos;
-using Library.Applictation.Interfaces;
 using Library.Domain.Entities;
 using Library.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -152,5 +152,67 @@ namespace Library.Infrastructure.Services
                 PageSize = parameters.PageSize
             };
         }
+
+        public async Task<BookDto> UpdateBookAsync(Guid id, UpdateBookRequest request)
+        {
+            var book = await _context.Books.FindAsync(id);
+            if (book == null)
+                throw new KeyNotFoundException("Книга не найдена");
+
+            // Проверяем уникальность ISBN (кроме самой обновляемой книги)
+            var isbnTaken = await _context.Books
+                .AnyAsync(b => b.ISBN == request.ISBN && b.Id != id);
+            if (isbnTaken)
+                throw new InvalidOperationException("Книга с таким ISBN уже существует");
+
+            book.UpdateDetails(
+                request.Title,
+                request.ISBN,
+                request.Genre,
+                request.PublicationYear,
+                request.TotalCopies
+            );
+
+            await _context.SaveChangesAsync();
+            return MapToDto(book);
+        }
+
+        public async Task DeleteBookAsync(Guid id)
+        {
+            var book = await _context.Books.FindAsync(id);
+            if (book == null)
+                throw new KeyNotFoundException("Книга не найдена");
+
+            book.MarkAsDeleted();
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RestoreBookAsync(Guid id)
+        {
+            // Ищем среди удалённых — обходим query filter
+            var book = await _context.Books
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (book == null)
+                throw new KeyNotFoundException("Книга не найдена");
+            if (!book.IsDeleted)
+                throw new InvalidOperationException("Книга не была удалена");
+
+            book.Restore();
+            await _context.SaveChangesAsync();
+        }
+
+        // Вспомогательный метод (вынесите, если ещё не сделали)
+        private static BookDto MapToDto(Book book) => new()
+        {
+            Id = book.Id,
+            Title = book.Title,
+            ISBN = book.ISBN,
+            Genre = book.Genre,
+            PublicationYear = book.PublicationYear,
+            TotalCopies = book.TotalCopies,
+            AvailableCopies = book.AvailableCopies
+        };
     }
 }

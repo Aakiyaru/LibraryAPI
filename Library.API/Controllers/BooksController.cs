@@ -1,54 +1,66 @@
 ﻿using Library.Application.Dtos;
+using Library.Application.Interfaces;
 using Library.Applictation.Dtos;
-using Library.Applictation.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Library.API.Controllers
+namespace Library.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class BooksController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class BooksController : ControllerBase
+    private readonly IBookService _bookService;
+
+    public BooksController(IBookService bookService)
     {
-        private readonly IBookService _bookService;
+        _bookService = bookService;
+    }
 
-        public BooksController(IBookService bookService)
-        {
-            _bookService = bookService;
-        }
+    [HttpGet]
+    public async Task<IActionResult> GetBooks([FromQuery] BookQueryParameters parameters)
+    {
+        var result = await _bookService.GetBooksAsync(parameters);
+        return Ok(result);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var books = await _bookService.GetAllBooksAsync();
-            return Ok(books);
-        }
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var book = await _bookService.GetBookByIdAsync(id);
+        if (book == null) return NotFound();
+        return Ok(book);
+    }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var book = await _bookService.GetBookByIdAsync(id);
+    [HttpPost]
+    [Authorize(Roles = "Admin,Librarian")]
+    public async Task<IActionResult> Create([FromBody] CreateBookRequest request)
+    {
+        var created = await _bookService.CreateBookAsync(request);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
 
-            if (book == null)
-            {
-                return NotFound();
-            }
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin,Librarian")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBookRequest request)
+    {
+        var updated = await _bookService.UpdateBookAsync(id, request);
+        return Ok(updated);
+    }
 
-            return Ok(book);
-        }
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _bookService.DeleteBookAsync(id);
+        return NoContent();   // 204 — успешно, тела нет
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateBookRequest request)
-        {
-            var created = await _bookService.CreateBookAsync(request);
-
-            return CreatedAtAction(nameof(GetById), new {id =  created.Id}, created);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetBooks([FromQuery] BookQueryParameters parameters)
-        {
-            var result = await _bookService.GetBooksAsync(parameters);
-            return Ok(result);
-        }
+    [HttpPost("{id}/restore")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Restore(Guid id)
+    {
+        await _bookService.RestoreBookAsync(id);
+        return NoContent();
     }
 }
