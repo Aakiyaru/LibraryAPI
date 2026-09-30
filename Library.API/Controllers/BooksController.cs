@@ -1,6 +1,7 @@
 ﻿using Library.Application.Dtos;
 using Library.Applictation.Dtos;
 using Library.Applictation.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Library.API.Controllers
@@ -30,6 +31,7 @@ namespace Library.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Librarian")]
         public async Task<IActionResult> Create([FromBody] CreateBookRequest request)
         {
             var created = await _bookService.CreateBookAsync(request);

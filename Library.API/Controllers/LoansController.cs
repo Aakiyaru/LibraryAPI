@@ -1,11 +1,13 @@
 ﻿using Library.Application.Dtos;
 using Library.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Library.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class LoansController : ControllerBase
 {
     private readonly ILoanService _loanService;
@@ -16,6 +18,7 @@ public class LoansController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,Librarian")]
     public async Task<IActionResult> GetAll()
     {
         var loans = await _loanService.GetAllLoansAsync();
