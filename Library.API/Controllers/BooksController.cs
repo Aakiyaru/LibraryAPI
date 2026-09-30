@@ -16,13 +16,6 @@ namespace Library.API.Controllers
             _bookService = bookService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var books = await _bookService.GetAllBooksAsync();
-            return Ok(books);
-        }
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {

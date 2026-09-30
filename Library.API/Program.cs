@@ -1,10 +1,11 @@
+using FluentValidation;
+using Library.API.Middleware;
+using Library.Application.Interfaces;
 using Library.Applictation.Interfaces;
 using Library.Applictation.Validators;
 using Library.Infrastructure.Data;
 using Library.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
-using FluentValidation;
-using Library.API.Middleware;
 
 namespace Library.API
 {
@@ -19,9 +20,10 @@ namespace Library.API
             // Строка подключения будет лежать в appsettings.json
             builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddSingleton<IBookService, BookService>();
+            builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<ILoanService, LoanService>();
 
-            builder.Services.AddValidatorsFromAssembly(typeof(CreateBookRequestValidator).Assembly);
+            builder.Services.AddValidatorsFromAssemblyContaining<CreateBookRequestValidator>();
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -35,6 +37,8 @@ namespace Library.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseDeveloperExceptionPage(); // покажет детали ошибки прямо в браузере
 
             app.UseHttpsRedirection();
 
