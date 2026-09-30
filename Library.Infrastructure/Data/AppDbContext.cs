@@ -36,6 +36,10 @@ public class AppDbContext : DbContext
 
             entity.Property(b => b.Genre)
                 .HasMaxLength(100);
+
+            entity.HasQueryFilter(b => !b.IsDeleted);
+
+            entity.Property(b => b.IsDeleted).HasDefaultValue(false);
         });
 
         // Настройка User
