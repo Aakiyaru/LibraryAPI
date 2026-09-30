@@ -69,16 +69,18 @@ public class Book
             throw new InvalidOperationException(
                 "Нельзя уменьшить общее количество ниже уже выданных экземпляров");
 
+        var borrowed = TotalCopies - AvailableCopies;
+        if (totalCopies < borrowed)
+            throw new InvalidOperationException(
+                $"Нельзя установить общее количество {totalCopies}: " +
+                $"у читателей уже {borrowed} экземпляров");
+
         Title = title;
         ISBN = isbn;
         Genre = genre;
         PublicationYear = year;
 
-        // Если увеличили общее количество — увеличиваем и доступное
-        if (totalCopies > TotalCopies)
-        {
-            AvailableCopies += totalCopies - TotalCopies;
-        }
+        AvailableCopies += totalCopies - TotalCopies;
         TotalCopies = totalCopies;
     }
 

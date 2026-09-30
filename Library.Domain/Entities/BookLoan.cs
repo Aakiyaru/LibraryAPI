@@ -25,6 +25,8 @@ public class BookLoan
         if (!user.CanBorrowMore())
             throw new InvalidOperationException("Пользователь уже взял максимум книг (5)");
 
+        book.BorrowCopy();
+
         return new BookLoan
         {
             Id = Guid.NewGuid(),
@@ -44,13 +46,12 @@ public class BookLoan
             throw new InvalidOperationException("Книга уже возвращена");
 
         ReturnDate = DateTime.UtcNow;
-        Book.ReturnCopy(); // увеличиваем AvailableCopies
+        Book.ReturnCopy();
 
-        // Расчёт штрафа, если просрочка
         if (ReturnDate > DueDate)
         {
-            var daysOverdue = (ReturnDate.Value - DueDate).Days;
-            // Если не указано, используем 10 рублей в день
+            // Считаем каждый НАЧАТЫЙ день просрочки
+            var daysOverdue = (int)Math.Ceiling((ReturnDate.Value - DueDate).TotalDays);
             var rate = finePerDay ?? 10m;
             Fine = daysOverdue * rate;
         }

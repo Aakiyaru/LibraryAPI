@@ -54,7 +54,6 @@ public class LoanService : ILoanService
         // Уменьшаем количество доступных копий (это делает BookLoan.Create? 
         // Нет, мы вызываем BorrowCopy вручную, так как Create только создаёт запись, 
         // а уменьшение копий — это отдельная операция.
-        book.BorrowCopy(); // уменьшаем AvailableCopies
 
         _context.Loans.Add(loan);
         await _context.SaveChangesAsync();
