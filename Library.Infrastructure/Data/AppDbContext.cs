@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<Book> Books { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<BookLoan> Loans { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +67,19 @@ public class AppDbContext : DbContext
                   .WithMany() // у Book пока нет коллекции, можем добавить позже
                   .HasForeignKey(l => l.BookId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("RefreshTokens");
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.Token).IsRequired().HasMaxLength(200);
+            entity.HasIndex(t => t.Token).IsUnique();
+
+            entity.HasOne(t => t.User)
+                  .WithMany()
+                  .HasForeignKey(t => t.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

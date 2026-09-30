@@ -1,5 +1,6 @@
 ﻿using Library.Application.Dtos;
 using Library.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Library.API.Controllers;
@@ -41,5 +42,27 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new { Message = ex.Message });
         }
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    {
+        try
+        {
+            var result = await _authService.RefreshAsync(request);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPost("revoke")]
+    [Authorize]
+    public async Task<IActionResult> Revoke([FromBody] RefreshRequest request)
+    {
+        await _authService.RevokeAsync(request.RefreshToken);
+        return NoContent();
     }
 }

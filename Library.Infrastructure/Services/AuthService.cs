@@ -24,22 +24,17 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
-        // Проверяем, что пользователь с таким email не существует
         var exists = await _context.Users.AnyAsync(u => u.Email == request.Email.ToLowerInvariant());
         if (exists)
             throw new InvalidOperationException("Пользователь с таким email уже зарегистрирован");
 
-        // Хешируем пароль через BCrypt
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-
-        // Создаём пользователя через фабричный метод
         var user = User.Create(request.FullName, request.Email, passwordHash, role: "User");
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // Сразу выдаём токен, чтобы клиенту не нужно было логиниться отдельно
-        return GenerateAuthResponse(user);
+        return await GenerateAuthResponseAsync(user);
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -47,28 +42,51 @@ public class AuthService : IAuthService
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email.ToLowerInvariant());
 
-        if (user == null)
+        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Неверный email или пароль");
 
-        // Проверяем пароль
-        var isValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
-        if (!isValid)
-            throw new UnauthorizedAccessException("Неверный email или пароль");
-
-        return GenerateAuthResponse(user);
+        return await GenerateAuthResponseAsync(user);
     }
 
-    private AuthResponse GenerateAuthResponse(User user)
+    public async Task<AuthResponse> RefreshAsync(RefreshRequest request)
+    {
+        var storedToken = await _context.RefreshTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.Token == request.RefreshToken);
+
+        if (storedToken == null || !storedToken.IsActive)
+            throw new UnauthorizedAccessException("Недействительный или истёкший refresh-токен");
+
+        // Отзываем старый токен (rotation) — так безопаснее
+        storedToken.Revoke();
+        await _context.SaveChangesAsync();
+
+        // Генерируем новую пару
+        return await GenerateAuthResponseAsync(storedToken.User);
+    }
+
+    public async Task RevokeAsync(string refreshToken)
+    {
+        var token = await _context.RefreshTokens
+            .FirstOrDefaultAsync(t => t.Token == refreshToken);
+
+        if (token == null || !token.IsActive)
+            return; // тихо игнорируем — не выдаём, что токена не было
+
+        token.Revoke();
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task<AuthResponse> GenerateAuthResponseAsync(User user)
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"]!;
         var issuer = jwtSettings["Issuer"]!;
         var audience = jwtSettings["Audience"]!;
-        var expiryMinutes = int.Parse(jwtSettings["ExpiryMinutes"] ?? "60");
+        var expiryMinutes = int.Parse(jwtSettings["ExpiryMinutes"] ?? "15");
 
-        var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+        var accessTokenExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
 
-        // Claims — это данные, которые будут храниться в токене
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -85,17 +103,23 @@ public class AuthService : IAuthService
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: expiresAt,
+            expires: accessTokenExpiresAt,
             signingCredentials: credentials
         );
 
+        // Создаём refresh-токен и сохраняем в БД
+        var refreshToken = RefreshToken.Create(user.Id);
+        _context.RefreshTokens.Add(refreshToken);
+        await _context.SaveChangesAsync();
+
         return new AuthResponse
         {
-            Token = new JwtSecurityTokenHandler().WriteToken(token),
+            AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
+            RefreshToken = refreshToken.Token,
             Email = user.Email,
             FullName = user.FullName,
             Role = user.Role,
-            ExpiresAt = expiresAt
+            AccessTokenExpiresAt = accessTokenExpiresAt
         };
     }
 }
