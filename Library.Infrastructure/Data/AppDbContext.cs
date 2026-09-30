@@ -50,6 +50,8 @@ public class AppDbContext : DbContext
             entity.Property(u => u.FullName).IsRequired().HasMaxLength(100);
             entity.Property(u => u.Email).IsRequired().HasMaxLength(100);
             entity.HasIndex(u => u.Email).IsUnique();
+            entity.HasQueryFilter(u => !u.IsDeleted);
+            entity.Property(u => u.IsDeleted).HasDefaultValue(false);
         });
 
         // Настройка BookLoan

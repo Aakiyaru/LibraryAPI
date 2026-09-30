@@ -1,6 +1,7 @@
 using FluentValidation;
 using Library.API.Middleware;
 using Library.Application.Interfaces;
+using Library.Applictation.Interfaces;
 using Library.Applictation.Validators;
 using Library.Infrastructure.Data;
 using Library.Infrastructure.Services;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 using System.Text;
 
 namespace Library.API
@@ -26,6 +28,7 @@ namespace Library.API
             builder.Services.AddScoped<IBookService, BookService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IUserService, UserService>();
 
             builder.Services.AddValidatorsFromAssemblyContaining<CreateBookRequestValidator>();
 
@@ -47,6 +50,8 @@ namespace Library.API
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = jwtSettings["Issuer"],
                         ValidAudience = jwtSettings["Audience"],
+                        NameClaimType = ClaimTypes.Name,
+                        RoleClaimType = ClaimTypes.Role,
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
                         ClockSkew = TimeSpan.Zero   // без дефолтных 5 минут задержки
                     };
